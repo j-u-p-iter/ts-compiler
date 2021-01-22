@@ -16,7 +16,7 @@
  *   - sourceMap - this is the way to tell TS to emit source maps in the separate files 
  *     alongside their corresponding ts files. In this case  To let a debugger or any another client, that uses source map, knowledge about this source map,
        the link to the generated source maps will be placed into the compiled files. Example of such a link can look like this: `//# sourceMappingURL=main.js.map`.
- *   - inlineSourceMap
+ *   - inlineSourceMap - in this way instead of having a separate file with source maps, the contents of that file will be included into the compiled file.
  */
 `inlineSourceMap` to true;
 
