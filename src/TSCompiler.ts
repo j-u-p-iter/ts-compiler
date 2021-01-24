@@ -60,9 +60,14 @@ export class TSCompiler {
   }
 
   private compileTSFile(codeToCompile) {
-    return this.ts.transpileModule(codeToCompile, {
-      compilerOptions: this.compilerOptions
+    const { diagnostics, outputText } = this.ts.transpileModule(codeToCompile, {
+      compilerOptions: this.compilerOptions,
+      reportDiagnostics: true
     });
+
+    console.log(diagnostics);
+
+    return outputText;
   }
 
   // private setupSourceMaps() {
@@ -141,7 +146,7 @@ export class TSCompiler {
 
     const cacheParams = await this.getCacheParams(filePath, codeToCompile);
 
-    const compiledCodeFromCache = this.diskCache.get(cacheParams);
+    const compiledCodeFromCache = await this.diskCache.get(cacheParams);
 
     if (compiledCodeFromCache) {
       return compiledCodeFromCache;
