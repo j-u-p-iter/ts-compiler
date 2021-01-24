@@ -1,12 +1,47 @@
+import { readFileSync } from "fs-extra";
+import path from "path";
+import typescript from "typescript";
+
 import { findPathToFile } from "@j.u.p.iter/find-path-to-file";
-import { CacheParams, InFilesCache } from '@j.u.p.iter/in-files-cache';
+import { CacheParams, InFilesCache } from "@j.u.p.iter/in-files-cache";
+
+/**
+ * To be able to compile as we want it to be, we need to go through initialization step at first:
+ * During initialization step we do all necessary setups:
+ *
+ *     a. Prepare compiler options. Most compiler options come from outside in arguments.
+ *        But there're some options we need to setup, because without this options it will
+ *        be impossible to achieve the goals we have to achieve with this compiler.
+ *
+ *     b. Setup source maps. Errors, that happen during compiling step should have readable stack.
+ *        For this purpose we use tool, that uses source maps under the hood and shows error stack,
+ *        that includes sources from an original file.
+ *
+ * Compiling process itself starts on "compile" method call and consists on several phases:
+ *
+ *   - cache initialization. We want to be able not to recompile something we've already compiled previously.
+ *     And if the path of the file and content of the file are the same, we want to extract the compiled version
+ *     of the file from a cache. For this purpose we need the cache.
+ *
+ *   - check, if there's a compiled version of the file in the cache. And if there's such a version, we return
+ *     compiled version. If there's no compiled version, we continue further.
+ *
+ *   - compilation phase itself. Here we compile code, using TypeScript API method.
+ *
+ *   - cache compiled data on the disk and return compiled data.
+ *
+ */
 
 export class TSCompiler {
+  private compilerOptions: typescript.CompilerOptions | null = null;
+
   private appRootPath = null;
 
   private cacheFolderPath = null;
 
-  private cache = null;
+  private diskCache = null;
+
+  private ts: typeof typescript | null = null;
 
   private async getAppRootFolderPath() {
     if (this.appRootPath) {
@@ -20,23 +55,25 @@ export class TSCompiler {
     return this.appRootPath;
   }
 
-  private prepareCompilerOptions() {
-
+  private prepareCompilerOptions(compilerOptions: typescript.CompilerOptions) {
+    return compilerOptions;
   }
 
-  private compileTSFile(filePath, codeToCompile) {
-
+  private compileTSFile(codeToCompile) {
+    return this.ts.transpileModule(codeToCompile, {
+      compilerOptions: this.compilerOptions
+    });
   }
 
-  private setupSourceMaps() {
+  // private setupSourceMaps() {
 
-  }
+  // }
 
   private async initCache() {
-    if (!this.cache) {
-      this.cache = new InFilesCache(this.cacheFolderPath);
+    if (!this.diskCache) {
+      this.diskCache = new InFilesCache(this.cacheFolderPath);
     }
-  } 
+  }
 
   /**
    * File path can be either absolute or relative
@@ -58,46 +95,61 @@ export class TSCompiler {
     return pathToModify.replace(appRootFolderPath, "");
   }
 
-  private async getCacheParams(filePath: string, codeToCompile?: string): Promise<CacheParams>  {
+  private async getCacheParams(
+    filePath: string,
+    codeToCompile?: string
+  ): Promise<CacheParams> {
     const appRootFolderPath = await this.getAppRootFolderPath();
-    const relativePathToFile = await this.absolutePathToRelative(filePath); 
+    const relativePathToFile = await this.absolutePathToRelative(filePath);
     const fullPathToFile = path.resolve(appRootFolderPath, relativePathToFile);
 
-    const fileContent = codeToCompile 
+    const fileContent = codeToCompile
       ? codeToCompile
       : readFileSync(fullPathToFile);
 
     return {
       fileContent,
       filePath: fullPathToFile,
-      fileExtension: '.js',
+      fileExtension: ".js"
     };
   }
-  
-  constructor(options: { 
-    cacheFolderPath: string; 
-    compilerOptions: any;
+
+  /**
+   * Options description:
+   *
+   *   - ts - typescript instance. We pass typescript instance using Dependency Injection pattern
+   *     no to be bound on a concrete version of TS;
+   *
+   *   - configPath - path to the typescript config;
+   *
+   *   - cacheFolderPath - path to the cache folder. We store a parsed version of the config in the cache;
+   *
+   *   - compilerOptions - typescript options to compile with.
+   */
+  constructor(options: {
+    ts: typeof typescript;
+    cacheFolderPath: string;
+    compilerOptions: typescript.CompilerOptions;
   }) {
     this.cacheFolderPath = options.cacheFolderPath;
+    this.ts = options.ts;
+    this.compilerOptions = this.prepareCompilerOptions(options.compilerOptions);
   }
 
-  public async compile({ params: { 
-    filePath: string, 
-    codeToCompile?: string 
-  }) {
+  public async compile(filePath: string, codeToCompile?: string) {
     await this.initCache();
 
     const cacheParams = await this.getCacheParams(filePath, codeToCompile);
 
-    const compiledCodeFromCache = this.cache.get(cacheParams);
+    const compiledCodeFromCache = this.diskCache.get(cacheParams);
 
-    if (compiledCodeFromCache) { 
-      return compiledCodeFromCache; 
+    if (compiledCodeFromCache) {
+      return compiledCodeFromCache;
     }
 
-    const compiledCode = this.compileTSFile(filePath, codeToCompile);
+    const compiledCode = this.compileTSFile(codeToCompile);
 
-    this.cache.set(cacheParams, compiledCode);
+    this.diskCache.set(cacheParams, compiledCode);
 
     return compiledCode;
   }
