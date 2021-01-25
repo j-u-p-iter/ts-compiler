@@ -2,8 +2,10 @@ import { readFileSync } from "fs-extra";
 import path from "path";
 import typescript from "typescript";
 
+import { InvalidPathError } from "@j.u.p.iter/custom-error";
 import { findPathToFile } from "@j.u.p.iter/find-path-to-file";
 import { CacheParams, InFilesCache } from "@j.u.p.iter/in-files-cache";
+import { SystemErrorCode } from "@j.u.p.iter/system-error-code";
 
 /**
  * To be able to compile as we want it to be, we need to go through initialization step at first:
@@ -29,6 +31,28 @@ import { CacheParams, InFilesCache } from "@j.u.p.iter/in-files-cache";
  *   - compilation phase itself. Here we compile code, using TypeScript API method.
  *
  *   - cache compiled data on the disk and return compiled data.
+ *
+ */
+
+/**
+ * The class supposes to work with two different types of files.
+ *
+ * The first type is called "virtual". This is the type, that doesn't present
+ *   in the file system and content for this file comes from user's input (for example, from repl).
+ *   In this case we still need some file path (let's say file id) to create reasonable file path
+ *   for the file with cache. So, the user of this class still need to pass some file path for
+ *   the content we want to cache.
+ *
+ * The second type is called "real". This is the type, that really presents in the file system.
+ *   In this case we don't provide file's content to the "compile" method. The class tries to read
+ *   this content internally.
+ *
+ * So, one more time:
+ *   - for the "virtual" types of files we should provide both file path and
+ *     file content params to generate correct file path to the result file with cache;
+ *
+ *   - for the "real" types of files we should provide only file path, because the
+ *     content will be read by the system internally.
  *
  */
 
@@ -59,11 +83,44 @@ export class TSCompiler {
     return compilerOptions;
   }
 
-  private compileTSFile(codeToCompile) {
-    const { diagnostics, outputText } = this.ts.transpileModule(codeToCompile, {
-      compilerOptions: this.compilerOptions,
-      reportDiagnostics: true
-    });
+  /**
+   * We read the config's raw content to use the content in the InFilesCache.
+   *   The presence of the config is the mandatory requirement. So, if there's no
+   *   the such a file in the application we throw an appropriate error.
+   *
+   */
+  private async readFile(filePath: string): Promise<string | null> {
+    const resolvedFilePath = await this.resolvePathToFile(filePath);
+
+    try {
+      const fileContent = readFileSync(resolvedFilePath, "utf8");
+
+      return fileContent;
+    } catch (error) {
+      if (error.code === SystemErrorCode.NO_FILE_OR_DIRECTORY) {
+        throw new InvalidPathError(resolvedFilePath, {
+          context: "@j.u.p.iter/ts-compiler"
+        });
+      }
+
+      throw error;
+    }
+  }
+
+  private async compileTSFile(
+    filePath: string,
+    codeToCompile?: string
+  ): Promise<string> {
+    const resultCodeToCompile = codeToCompile
+      ? codeToCompile
+      : await this.readFile(filePath);
+    const { diagnostics, outputText } = this.ts.transpileModule(
+      resultCodeToCompile,
+      {
+        compilerOptions: this.compilerOptions,
+        reportDiagnostics: true
+      }
+    );
 
     console.log(diagnostics);
 
@@ -100,22 +157,29 @@ export class TSCompiler {
     return pathToModify.replace(appRootFolderPath, "");
   }
 
+  private async resolvePathToFile(originalFilePath: string): Promise<string> {
+    const appRootFolderPath = await this.getAppRootFolderPath();
+    const relativePathToFile = await this.absolutePathToRelative(
+      originalFilePath
+    );
+
+    return path.resolve(appRootFolderPath, relativePathToFile);
+  }
+
   private async getCacheParams(
     filePath: string,
     codeToCompile?: string
   ): Promise<CacheParams> {
-    const appRootFolderPath = await this.getAppRootFolderPath();
-    const relativePathToFile = await this.absolutePathToRelative(filePath);
-    const fullPathToFile = path.resolve(appRootFolderPath, relativePathToFile);
+    const resolvedFilePath = await this.resolvePathToFile(filePath);
 
     const fileContent = codeToCompile
       ? codeToCompile
-      : readFileSync(fullPathToFile);
+      : readFileSync(resolvedFilePath);
 
     return {
       fileContent,
-      filePath: fullPathToFile,
-      fileExtension: ".js"
+      fileExtension: ".js",
+      filePath: resolvedFilePath
     };
   }
 
@@ -152,9 +216,9 @@ export class TSCompiler {
       return compiledCodeFromCache;
     }
 
-    const compiledCode = this.compileTSFile(codeToCompile);
+    const compiledCode = await this.compileTSFile(filePath, codeToCompile);
 
-    this.diskCache.set(cacheParams, compiledCode);
+    await this.diskCache.set(cacheParams, compiledCode);
 
     return compiledCode;
   }
