@@ -12,26 +12,12 @@ import { SystemErrorCode } from "@j.u.p.iter/system-error-code";
  * During initialization step we do all necessary setups:
  *
  *     a. Prepare compiler options. Most compiler options come from outside in arguments.
- *        But there're some options we need to setup, because without this options it will
+ *        But there're some options we need to setup, because without these options it will
  *        be impossible to achieve the goals we have to achieve with this compiler.
  *
  *     b. Setup source maps. Errors, that happen during compiling step should have readable stack.
  *        For this purpose we use tool, that uses source maps under the hood and shows error stack,
  *        that includes sources from an original file.
- *
- * Compiling process itself starts on "compile" method call and consists on several phases:
- *
- *   - cache initialization. We want to be able not to recompile something we've already compiled previously.
- *     And if the path of the file and content of the file are the same, we want to extract the compiled version
- *     of the file from a cache. For this purpose we need the cache.
- *
- *   - check, if there's a compiled version of the file in the cache. And if there's such a version, we return
- *     compiled version. If there's no compiled version, we continue further.
- *
- *   - compilation phase itself. Here we compile code, using TypeScript API method.
- *
- *   - cache compiled data on the disk and return compiled data.
- *
  */
 
 /**
@@ -206,20 +192,44 @@ export class TSCompiler {
   }
 
   public async compile(filePath: string, codeToCompile?: string) {
+    /**
+     * Cache initialization. We want to be able not to recompile something we've already compiled previously.
+     *   And if the path of the file and content of the file are the same, we want to extract the compiled version
+     *   of the file from a cache. For this purpose we need the cache.
+     *
+     */
+
     await this.initCache();
 
     const cacheParams = await this.getCacheParams(filePath, codeToCompile);
 
     const compiledCodeFromCache = await this.diskCache.get(cacheParams);
 
+    /**
+     * Checks, if there's a compiled version of the file in the cache. And if there's such a version, we return
+     * a compiled version. If there's no compiled version, we will compile file further.
+     *
+     */
     if (compiledCodeFromCache) {
       return compiledCodeFromCache;
     }
 
+    /**
+     * Compilation phase itself. Here we compile code, using TypeScript API method.
+     *
+     */
     const compiledCode = await this.compileTSFile(filePath, codeToCompile);
 
+    /**
+     * Store on the disk compiled code.
+     *
+     */
     await this.diskCache.set(cacheParams, compiledCode);
 
+    /**
+     * Returns newly compiled data.
+     *
+     */
     return compiledCode;
   }
 }
