@@ -43,16 +43,42 @@ import { SystemErrorCode } from "@j.u.p.iter/system-error-code";
  */
 
 export class TSCompiler {
+  /**
+   * Stores prepared compiler options.
+   *   Compiler options are prepared during initialization phase
+   *   with help of "prepareCompilerOptions".
+   *
+   */
   private compilerOptions: typescript.CompilerOptions | null = null;
 
+  /**
+   * An absolute path to the root project folder.
+   */
   private appRootPath = null;
 
+  /**
+   * A path to the cache folder.
+   */
   private cacheFolderPath = null;
 
+  /**
+   * Cache instance that is used to store compiled code in the cache.
+   *
+   */
   private diskCache = null;
 
+  /**
+   * TypeScript instance, passed during initialization phase.
+   *   It's necessary to pass it with props not to be bound
+   *   to one concrete version of TS.
+   */
   private ts: typeof typescript | null = null;
 
+  /**
+   * Detects the root path to the project by location of
+   *   the "package.json" file internally.
+   *
+   */
   private async getAppRootFolderPath() {
     if (this.appRootPath) {
       return this.appRootPath;
@@ -65,6 +91,10 @@ export class TSCompiler {
     return this.appRootPath;
   }
 
+  /**
+   * Prepare compiler options.
+   *
+   */
   private prepareCompilerOptions(compilerOptions: typescript.CompilerOptions) {
     return compilerOptions;
   }
@@ -93,6 +123,11 @@ export class TSCompiler {
     }
   }
 
+  /**
+   * Compiles typescript file.
+   *   For this purpose we use "transpileModule" method from TypeScript API.
+   *
+   */
   private async compileTSFile(
     filePath: string,
     codeToCompile?: string
@@ -117,6 +152,10 @@ export class TSCompiler {
 
   // }
 
+  /**
+   * Initialize cache instance and store it in an appropriate property.
+   *
+   */
   private async initCache() {
     if (!this.diskCache) {
       this.diskCache = new InFilesCache(this.cacheFolderPath);
@@ -127,7 +166,7 @@ export class TSCompiler {
    * File path can be either absolute or relative
    *   (relative to the app root folder).
    *
-   * We need to make it relative if it's absolute, to be
+   * We need to make it relative if it's an absolute, to be
    *   able to work with this in a consistent way.
    *
    */
@@ -143,6 +182,13 @@ export class TSCompiler {
     return pathToModify.replace(appRootFolderPath, "");
   }
 
+  /**
+   * The file path should be relative to the app's root folder.
+   *   Here we create an absolute path to the config to make it
+   *   univeral and independent from the file location, that uses
+   *   this path.
+   *
+   */
   private async resolvePathToFile(originalFilePath: string): Promise<string> {
     const appRootFolderPath = await this.getAppRootFolderPath();
     const relativePathToFile = await this.absolutePathToRelative(
@@ -170,16 +216,15 @@ export class TSCompiler {
   }
 
   /**
-   * Options description:
-   *
+   * Initialization options:
    *   - ts - typescript instance. We pass typescript instance using Dependency Injection pattern
    *     no to be bound on a concrete version of TS;
    *
-   *   - configPath - path to the typescript config;
-   *
-   *   - cacheFolderPath - path to the cache folder. We store a parsed version of the config in the cache;
+   *   - cacheFolderPath - path to the cache folder. We store a parsed version of the config in the cache.
+   *     Path can be relative to the root folder of the project or an absolute.
    *
    *   - compilerOptions - typescript options to compile with.
+   *
    */
   constructor(options: {
     ts: typeof typescript;
