@@ -8,7 +8,7 @@
 
 ## Force some compiler options on class initialization step:
 
-Source maps map compiled file to the original file, line by line, character by character. For example, it says, that charachter 5 on line 2 in the compiled file is represented by a charachter 10 on line 10 in the original file. Such types of maps allow, for example, debuger to show the original file, using this map. In another words dubugger, using source maps, creates representation of the original file. Another use case of source map usage 
+Source maps map compiled file to the original file, line by line, character by character. For example, it says, that charachter 5 on line 2 in the compiled file is represented by a charachter 10 on line 10 in the original file. Such types of maps allow, for example, debuger to show the original file, using this map and the compiled file. In another words dubugger, using source maps and compiled file, creates representation of the original file. Another use case of source map usage is when error happens during running code of the compiled file, we can use source map, error stack and Error API to show stack with the code from the original file. Ofcourse it's much easier to find the place, when error has happened, if stack contains original version of code, instead of compiled one, that is minified and transpiled.
 
 /**
  * 
