@@ -42,6 +42,21 @@ import { SystemErrorCode } from "@j.u.p.iter/system-error-code";
  *
  */
 
+/**
+ * About source maps.
+ *
+ * Source maps map compiled file to the original file, line by line, character by character.
+ *   For example, it says, that charachter 5 on line 2 in the compiled file is represented by a
+ *   charachter 10 on line 10 in the original file. Such types of maps allow, for example,
+ *   debuger to show the original file, using this map. In another words dubugger, using source maps,
+ *   creates representation of the original file. Another use case of source map usage is to show error stack,
+ *   based on the code from the original file, instead of the compiled one. Of course it's much easier to find
+ *   the error if stack contains original version of code instead of compiled one, that is minified and transpiled.
+ *
+ * There are two possible ways of configuring ts with sourcemaps.
+ *
+ */
+
 export class TSCompiler {
   /**
    * Stores prepared compiler options.
@@ -106,15 +121,13 @@ export class TSCompiler {
    *
    */
   private async readFile(filePath: string): Promise<string | null> {
-    const resolvedFilePath = await this.resolvePathToFile(filePath);
-
     try {
-      const fileContent = readFileSync(resolvedFilePath, "utf8");
+      const fileContent = readFileSync(filePath, "utf8");
 
       return fileContent;
     } catch (error) {
       if (error.code === SystemErrorCode.NO_FILE_OR_DIRECTORY) {
-        throw new InvalidPathError(resolvedFilePath, {
+        throw new InvalidPathError(filePath, {
           context: "@j.u.p.iter/ts-compiler"
         });
       }
@@ -135,6 +148,7 @@ export class TSCompiler {
     const resultCodeToCompile = codeToCompile
       ? codeToCompile
       : await this.readFile(filePath);
+
     const { diagnostics, outputText } = this.ts.transpileModule(
       resultCodeToCompile,
       {
@@ -206,7 +220,7 @@ export class TSCompiler {
 
     const fileContent = codeToCompile
       ? codeToCompile
-      : readFileSync(resolvedFilePath);
+      : await this.readFile(resolvedFilePath);
 
     return {
       fileContent,
@@ -221,7 +235,7 @@ export class TSCompiler {
    *     no to be bound on a concrete version of TS;
    *
    *   - cacheFolderPath - path to the cache folder. We store a parsed version of the config in the cache.
-   *     Path can be relative to the root folder of the project or an absolute.
+   *     Path can be relative to the root folder of the project or an absolute;
    *
    *   - compilerOptions - typescript options to compile with.
    *
@@ -243,7 +257,6 @@ export class TSCompiler {
      *   of the file from a cache. For this purpose we need the cache.
      *
      */
-
     await this.initCache();
 
     const cacheParams = await this.getCacheParams(filePath, codeToCompile);
@@ -251,8 +264,9 @@ export class TSCompiler {
     const compiledCodeFromCache = await this.diskCache.get(cacheParams);
 
     /**
-     * Checks, if there's a compiled version of the file in the cache. And if there's such a version, we return
-     * a compiled version. If there's no compiled version, we will compile file further.
+     * Checks, if there's a compiled version of the file in the cache.
+     * And if there's such a version, we return a compiled version.
+     * If there's no compiled version, we will compile file further.
      *
      */
     if (compiledCodeFromCache) {

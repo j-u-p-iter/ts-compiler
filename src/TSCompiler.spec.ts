@@ -2,6 +2,7 @@ import * as ts from 'typescript';
 import path from 'path';
 import { outputFileSync, readFile, pathExists, removeSync } from 'fs-extra';
 import { InFilesCache } from '@j.u.p.iter/in-files-cache';
+import { InvalidPathError } from "@j.u.p.iter/custom-error";
 
 import { TSCompiler } from './TSCompiler';
 
@@ -147,6 +148,24 @@ describe('TSCompiler', () => {
       );
 
       expect(compiledResult).toBe(compiledCodeInCache);
+    });
+
+    it('throws an error, if there is no a file by provided path', async () => {
+      const tsCompiler = new TSCompiler({ 
+        ts, 
+        cacheFolderPath,
+        compilerOptions: {}, 
+      });
+
+      /**
+       * If we don't provide code snippet, compiler should find and read file internally.
+       *   And if there is no such a file, it should throw an appropriate error.
+       *
+       */
+      const compilingResult = tsCompiler.compile(SOURCE_CODE_FILE_NAME);
+
+      await expect(compilingResult).rejects.toThrow(InvalidPathError);
+      await expect(compilingResult).rejects.toThrow(`File ${sourceCodeFilePath} does not exist`);
     });
   });
 })
