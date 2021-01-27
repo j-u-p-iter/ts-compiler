@@ -2,9 +2,9 @@ import * as ts from 'typescript';
 import path from 'path';
 import { outputFileSync, readFile, pathExists, removeSync } from 'fs-extra';
 import { InFilesCache } from '@j.u.p.iter/in-files-cache';
-import { InvalidPathError } from "@j.u.p.iter/custom-error";
+import { InvalidPathError, TSTranspileError } from "@j.u.p.iter/custom-error";
 
-import { TSCompiler } from './TSCompiler';
+import { TSCompiler } from '.';
 
 
 const SOURCE_CODE_FILE_NAME = 'fileName.ts';
@@ -13,6 +13,10 @@ const cacheFolderPath = path.resolve(__dirname, CACHE_FOLDER_NAME);
 const sourceCodeFilePath = path.resolve(__dirname, '..', SOURCE_CODE_FILE_NAME);
 
 const codeSnippet = `const func = (param: string): string => {
+  return param;
+}`;
+
+const invalidCodeSnippet = `func = param: string): string => {
   return param;
 }`;
 
@@ -94,6 +98,21 @@ describe('TSCompiler', () => {
 
       expect(compiledResult).toBe(compiledCodeInCache);
     });
+
+    it('throws an error if compiling code is invalid', async () => {
+      const tsCompiler = new TSCompiler({ 
+        ts, 
+        cacheFolderPath,
+        compilerOptions: {}, 
+      });
+
+      const compiledResult = tsCompiler.compile(
+        SOURCE_CODE_FILE_NAME,
+        invalidCodeSnippet
+      );
+
+      await expect(compiledResult).rejects.toThrow(TSTranspileError);
+    });
   });
 
   describe('for the real files', () => {
@@ -136,6 +155,19 @@ describe('TSCompiler', () => {
 
       const compiledCodeInCache = 'var param = "hello";';
 
+      /**
+       * The original source file contains one type of content
+       *   and the compiled file contains another content.
+       *   This allows to detect, do we use cache or not 
+       *   in this case.
+       *
+       */
+      outputFileSync(
+        sourceCodeFilePath,
+        codeSnippet,
+        'utf8',
+      );
+
       outputFileSync(
         generatePathToCachedFile(codeSnippet),
         compiledCodeInCache,
@@ -144,7 +176,6 @@ describe('TSCompiler', () => {
 
       const compiledResult = await tsCompiler.compile(
         SOURCE_CODE_FILE_NAME,
-        codeSnippet
       );
 
       expect(compiledResult).toBe(compiledCodeInCache);
@@ -166,6 +197,21 @@ describe('TSCompiler', () => {
 
       await expect(compilingResult).rejects.toThrow(InvalidPathError);
       await expect(compilingResult).rejects.toThrow(`File ${sourceCodeFilePath} does not exist`);
+    });
+
+    it('throws an error if compiling code is invalid', async () => {
+      const tsCompiler = new TSCompiler({ 
+        ts, 
+        cacheFolderPath,
+        compilerOptions: {}, 
+      });
+
+      const compiledResult = tsCompiler.compile(
+        SOURCE_CODE_FILE_NAME,
+        invalidCodeSnippet
+      );
+
+      await expect(compiledResult).rejects.toThrow(TSTranspileError);
     });
   });
 })

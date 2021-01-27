@@ -1180,10 +1180,10 @@
     "@hapi/bourne" "2.x.x"
     "@hapi/hoek" "9.x.x"
 
-"@j.u.p.iter/custom-error@^1.4.1":
-  version "1.4.1"
-  resolved "https://registry.yarnpkg.com/@j.u.p.iter/custom-error/-/custom-error-1.4.1.tgz#d818d4e3ee4cc71ebe01632edc53b6528b345bb4"
-  integrity sha512-JbkZO396/1IzZT5LZAcvSpza3ppnL4e4spPPtsxnW2nYySKkVCFZLJhAy8C7IfPAfOPQMB5fcQU4kkeswmHxDg==
+"@j.u.p.iter/custom-error@^1.5.1":
+  version "1.5.1"
+  resolved "https://registry.yarnpkg.com/@j.u.p.iter/custom-error/-/custom-error-1.5.1.tgz#8fd27a9d96a6103e6cca80dc23f5cba53a54c780"
+  integrity sha512-T53MH4vVXvCr30VIB8hPFbsff0o3UPnTZ+IcMITtu9tyhtto6KCzOWltu43MG2gJs0Spphsi/1DfYctougKciA==
   dependencies:
     "@j.u.p.iter/http-status" "^1.2.1"
 

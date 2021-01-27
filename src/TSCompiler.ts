@@ -2,7 +2,7 @@ import { readFileSync } from "fs-extra";
 import path from "path";
 import typescript from "typescript";
 
-import { InvalidPathError } from "@j.u.p.iter/custom-error";
+import { InvalidPathError, TSTranspileError } from "@j.u.p.iter/custom-error";
 import { findPathToFile } from "@j.u.p.iter/find-path-to-file";
 import { CacheParams, InFilesCache } from "@j.u.p.iter/in-files-cache";
 import { SystemErrorCode } from "@j.u.p.iter/system-error-code";
@@ -157,7 +157,20 @@ export class TSCompiler {
       }
     );
 
-    console.log(diagnostics);
+    if (diagnostics && diagnostics.length) {
+      const formattedErrorMessage = this.ts.formatDiagnostics(diagnostics, {
+        getNewLine: () => "\n",
+        getCurrentDirectory: () => path.dirname(filePath),
+        getCanonicalFileName: (fileName: string) => fileName
+      });
+
+      throw new TSTranspileError<typescript.Diagnostic[]>(
+        formattedErrorMessage,
+        filePath,
+        diagnostics,
+        { context: "@j.u.p.iter/ts-compiler" }
+      );
+    }
 
     return outputText;
   }
