@@ -11,13 +11,13 @@ import { SystemErrorCode } from "@j.u.p.iter/system-error-code";
  * To be able to compile as we want it to be, we need to go through initialization step at first:
  * During initialization step we do all necessary setups:
  *
- *     a. Prepare compiler options. Most compiler options come from outside in arguments.
- *        But there're some options we need to setup, because without these options it will
- *        be impossible to achieve the goals we have to achieve with this compiler.
+ *   a. Prepare compiler options. Most compiler options come from outside in arguments.
+ *      But there're some options we need to setup, because without these options it will
+ *      be impossible to achieve the goals we have to achieve with this compiler.
  *
- *     b. Setup source maps. Errors, that happen during compiling step should have readable stack.
- *        For this purpose we use tool, that uses source maps under the hood and shows error stack,
- *        that includes sources from an original file.
+ *   b. Setup source maps. Errors, that happen during compiling step should have readable stack.
+ *      For this purpose we use tool, that uses source maps under the hood and shows error stack,
+ *      that includes sources from an original file.
  */
 
 /**
@@ -53,7 +53,31 @@ import { SystemErrorCode } from "@j.u.p.iter/system-error-code";
  *   based on the code from the original file, instead of the compiled one. Of course it's much easier to find
  *   the error if stack contains original version of code instead of compiled one, that is minified and transpiled.
  *
- * There are two possible ways of configuring ts with sourcemaps.
+ * There are three available options to configure ts with sourcemaps:
+ *   - the first is the "sourceMap" option. With this option TypeScript will generate mapping files
+ *     alongside their corresponding "ts" files. So, if you have "main.ts" file, after the compilation you will have
+ *     3 files: "main.ts", "main.js" and "main.js.map". And inside the "main.js" file you will see the URL to the
+ *     source map file: //# sourceMappingURL=main.js.map.
+ *
+ *   - another option is "inlineSourceMap". With this option TypeScript instead of creating a separate file "main.js.map"
+ *     will include source maps into the compiled "main.js" file. So, in this case after the compilation we'll have 2 files:
+ *     "main.ts" and "main.js". And inside the "main.js" file you'll see the URL to the source map file like this:
+ *     //# sourceMappingURL=data:application/json;base64,eyJ2ZXJza... You can use either "sourceMap" option or "inlineSourceMap", but
+ *     can not use both.
+ *
+ *   - another option is "inlineSources". With this option TypeScript will put source code (code from "main.ts" file) into the source maps.
+ *     And if you combine "inlineSourceMap" and "inlineSources" options you will get "main.js" file with source maps and with original source code into the source maps.
+ *
+ * Combination "inlineSourceMap" + "inlineSources" is very powerful.
+ *
+ * Let's say, we want to get all benefits source maps give us in the production environment. What is the best option to do it?
+ * Well, if we have combination: "main.ts"  + "main.js" + "main.js.map" we'll have to server all three files in the production environment
+ * to get all benefits. It means, that we will do 3 separate HTTP requests (source maps in the original files requies
+ * source map file, and source map file requires original file) and we will need the possibility to server all three types of files.
+ *
+ * With the "inlineSourceMap" + "inlineSources" combination we'll have compiled code + original code + source maps inside of one file - combiled file "main.js".
+ * It means, that in the production environment we'll have only one HTTP request and will have to serve only one type of file, that is always
+ * very convenient.
  *
  */
 
@@ -108,6 +132,8 @@ export class TSCompiler {
 
   /**
    * Prepare compiler options.
+   *   To prepare compiler options we need to be sure, that we have "inlineSourceMap" + "inlineSources" combination.
+   *   The reason, why it's important, is described above.
    *
    */
   private prepareCompilerOptions(compilerOptions: typescript.CompilerOptions) {
