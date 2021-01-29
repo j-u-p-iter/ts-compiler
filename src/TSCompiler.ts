@@ -81,6 +81,38 @@ import { SystemErrorCode } from "@j.u.p.iter/system-error-code";
  *
  */
 
+/**
+ * Disk cache VS in-memory cache.
+ *
+ * Disk cache is about storing data in the file system in files
+ *
+ *   The benefit of such caching mechanism is that data in this case persistent. You can use this case
+ *   in different process instances.
+ *
+ *   The downside of such approach is that it's slow. I/O operations well known as the slowest operations in the computer.
+ *   So, to read the data from file you loose in speed and waste additional CPU resources.
+ *
+ *
+ * In-memory cache is about storing data in RAM.
+ *
+ *   The benefit of such caching is that it's very fast. And you almost don't waste any CPU resources to extract it.
+ *
+ *   The downside of such approach is that in this case the cached data is bound to the process instance or session, so
+ *   it's not persistent.
+ *
+ * Browser uses cache combination (let's call it like that): "in-memory cache + disk cache":
+ *
+ * "Memory Cache" stores and loads resources to and from Memory (RAM). So this is much faster but it is non-persistent.
+ * Content is available until you close the Browser.
+ *
+ * "Disk Cache" is persistent. Cached resources are stored and loaded to and from disk.
+ *
+ * Simple Test: Open Chrome Developper Tools / Network. Reload a page multiple times. The table column "Size" will tell you that some files are loaded "from memory cache".
+ * Now close the browser, open Developper Tools / Network again and load that page again. All cached files are loaded "from disk cache" now, because your memory cache is empty.
+ *
+ * In this module we also use the combination "in-memory cache + disk cache".
+ */
+
 export class TSCompiler {
   /**
    * Stores prepared compiler options.
