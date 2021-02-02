@@ -114,6 +114,23 @@ import { SystemErrorCode } from "@j.u.p.iter/system-error-code";
  * In this module we also use the combination "in-memory cache + disk cache".
  */
 
+/**
+ * When we compile a code and run a compiled code the Error can be thrown for this or that reason.
+ *   The stack of this Error will contain the compiled code place, where the error has happened.
+ *   This is obviously inconvenient, cause in many cases it's hard to read compiled code stack; and
+ *   as result it's hard to detect the reason of just happened Error.
+ *
+ *   To generate stack trace, that contains the original code, instead of compiled, we use "source-map-support" tool.
+ *
+ *   What it does is that it sets up custom Error.prepareStackTrace. Using this method, this tool:
+ *     - takes original stack trace with the compiled code;
+ *     - takes original code. To find original code it uses source maps;
+ *     - takes source maps;
+ *
+ *   and converts the original stack trace to the stack trace, that contains the original code.
+ *
+ */
+
 export class TSCompiler {
   // private memoryStorage: MemoryStorage = new MemoryStorage();
 
