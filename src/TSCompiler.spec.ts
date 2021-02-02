@@ -65,11 +65,11 @@ describe('TSCompiler', () => {
 
       await expect(pathExists(cacheFolderPath)).resolves.toBe(true);
 
-      expect(codeSnippetToArray(compiledResult)).toEqual(
+      // slice removes source map
+      expect(codeSnippetToArray(compiledResult).slice(0, -1)).toEqual(
         codeSnippetToArray(`var func = function (param) {
             return param;
-          };
-        `)
+          };`)
       );
 
       const cachedFileContent = await readFile(generatePathToCachedFile(codeSnippet), 'utf8');
@@ -113,6 +113,40 @@ describe('TSCompiler', () => {
 
       await expect(compiledResult).rejects.toThrow(TSTranspileError);
     });
+
+    it('compiles code with inline source maps with inline sources', async () => {
+      const tsCompiler = new TSCompiler({ 
+        ts, 
+        cacheFolderPath,
+        compilerOptions: {}, 
+      });
+
+      const compiledResult = await tsCompiler.compile(
+        SOURCE_CODE_FILE_NAME,
+        codeSnippet
+      );
+
+      expect(compiledResult.split('\n').pop()).toContain('//# sourceMappingURL=data:application/json;base64');
+    });
+
+    it('disables sourceMap option and enables inline source maps and inline sources', async () => {
+      const tsCompiler = new TSCompiler({ 
+        ts, 
+        cacheFolderPath,
+        compilerOptions: {
+          sourceMap: true,
+          inlineSources: false,
+          inlineSourceMap: false,
+        }, 
+      });
+
+      const compiledResult = await tsCompiler.compile(
+        SOURCE_CODE_FILE_NAME,
+        codeSnippet
+      );
+
+      expect(compiledResult.split('\n').pop()).toContain('//# sourceMappingURL=data:application/json;base64');
+    });
   });
 
   describe('for the real files', () => {
@@ -135,11 +169,11 @@ describe('TSCompiler', () => {
 
       await expect(pathExists(cacheFolderPath)).resolves.toBe(true);
 
-      expect(codeSnippetToArray(compiledResult)).toEqual(
+      // slice removes source map
+      expect(codeSnippetToArray(compiledResult).slice(0, -1)).toEqual(
         codeSnippetToArray(`var func = function (param) {
             return param;
-          };
-        `)
+          };`)
       );
 
       const cachedFileContent = await readFile(generatePathToCachedFile(codeSnippet), 'utf8');

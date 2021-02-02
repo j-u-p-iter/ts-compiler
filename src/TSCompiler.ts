@@ -6,6 +6,7 @@ import { InvalidPathError, TSTranspileError } from "@j.u.p.iter/custom-error";
 import { findPathToFile } from "@j.u.p.iter/find-path-to-file";
 import { CacheParams, InFilesCache } from "@j.u.p.iter/in-files-cache";
 import { SystemErrorCode } from "@j.u.p.iter/system-error-code";
+// import { MemoryStorage } from '@j.u.p.iter/memory-storage';
 
 /**
  * To be able to compile as we want it to be, we need to go through initialization step at first:
@@ -114,6 +115,8 @@ import { SystemErrorCode } from "@j.u.p.iter/system-error-code";
  */
 
 export class TSCompiler {
+  // private memoryStorage: MemoryStorage = new MemoryStorage();
+
   /**
    * Stores prepared compiler options.
    *   Compiler options are prepared during initialization phase
@@ -168,8 +171,23 @@ export class TSCompiler {
    *   The reason, why it's important, is described above.
    *
    */
-  private prepareCompilerOptions(compilerOptions: typescript.CompilerOptions) {
-    return compilerOptions;
+  private prepareCompilerOptions(
+    initialCompilerOptions: typescript.CompilerOptions
+  ) {
+    return {
+      ...initialCompilerOptions,
+
+      inlineSourceMap: true,
+
+      inlineSources: false,
+
+      /**
+       * "InlineSourceMap" and "sourceMap" can not be used together. If there're both options,
+       *   the "sourceMap" has a higher priority, so only this option will be applied.
+       *
+       */
+      sourceMap: false
+    };
   }
 
   /**
@@ -308,7 +326,9 @@ export class TSCompiler {
    *   - cacheFolderPath - path to the cache folder. We store a parsed version of the config in the cache.
    *     Path can be relative to the root folder of the project or an absolute;
    *
-   *   - compilerOptions - typescript options to compile with.
+   *   - compilerOptions - typescript options to compile with. We can read options from the config, instead of
+   *     using these options. However options can be passed also as CLI options. So, instead of reading options
+   *     we expect they are passed in props.
    *
    */
   constructor(options: {
@@ -341,6 +361,12 @@ export class TSCompiler {
      *
      */
     if (compiledCodeFromCache) {
+      /**
+       * We need this compiled code for the source maps.
+       *   Not to read again it from the file system, we
+       *   write it into the MemoryStorage.
+       */
+
       return compiledCodeFromCache;
     }
 
