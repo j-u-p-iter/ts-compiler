@@ -1,6 +1,6 @@
 {
   "name": "@j.u.p.iter/ts-compiler",
-  "version": "0.0.0-semantically-released",
+  "version": "0.0.1",
   "main": "dist/lib/index.js",
   "typings": "dist/types",
   "repository": "git@github.com:j-u-p-iter/ts-compiler.git",
