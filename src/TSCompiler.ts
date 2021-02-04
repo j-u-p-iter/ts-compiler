@@ -5,8 +5,9 @@ import typescript from "typescript";
 import { InvalidPathError, TSTranspileError } from "@j.u.p.iter/custom-error";
 import { findPathToFile } from "@j.u.p.iter/find-path-to-file";
 import { CacheParams, InFilesCache } from "@j.u.p.iter/in-files-cache";
+import { MemoryStorage } from "@j.u.p.iter/memory-storage";
 import { SystemErrorCode } from "@j.u.p.iter/system-error-code";
-// import { MemoryStorage } from '@j.u.p.iter/memory-storage';
+import sourceMapSupport from "source-map-support";
 
 /**
  * To be able to compile as we want it to be, we need to go through initialization step at first:
@@ -132,7 +133,7 @@ import { SystemErrorCode } from "@j.u.p.iter/system-error-code";
  */
 
 export class TSCompiler {
-  // private memoryStorage: MemoryStorage = new MemoryStorage();
+  private memoryStorage: MemoryStorage = new MemoryStorage();
 
   /**
    * Stores prepared compiler options.
@@ -335,6 +336,22 @@ export class TSCompiler {
     };
   }
 
+  private addSourceMapSupport() {
+    sourceMapSupport.install({
+      environment: "node",
+      handleUncaughtExceptions: false,
+      retrieveFile: sourceFilePath => {
+        console.log("######");
+        console.log(sourceFilePath);
+        console.log("######");
+
+        const compiledSourceCode = this.memoryStorage.read(sourceFilePath);
+
+        return compiledSourceCode ? compiledSourceCode : null;
+      }
+    });
+  }
+
   /**
    * Initialization options:
    *   - ts - typescript instance. We pass typescript instance using Dependency Injection pattern
@@ -356,12 +373,14 @@ export class TSCompiler {
     this.cacheFolderPath = options.cacheFolderPath;
     this.ts = options.ts;
     this.compilerOptions = this.prepareCompilerOptions(options.compilerOptions);
+    this.addSourceMapSupport();
   }
 
   public async compile(filePath: string, codeToCompile?: string) {
     /**
      * Cache initialization. We want to be able not to recompile something we've already compiled previously.
-     *   And if the path of the file and content of the file are the same, we want to extract the compiled version
+     *   And if the path of the file and content of the file are the
+     *   same, we want to extract the compiled version
      *   of the file from a cache. For this purpose we need the cache.
      *
      */
@@ -373,8 +392,8 @@ export class TSCompiler {
 
     /**
      * Checks, if there's a compiled version of the file in the cache.
-     * And if there's such a version, we return a compiled version.
-     * If there's no compiled version, we will compile file further.
+     *   And if there's such a version, we return a compiled version.
+     *   If there's no compiled version, we will compile file further.
      *
      */
     if (compiledCodeFromCache) {
@@ -388,7 +407,8 @@ export class TSCompiler {
     }
 
     /**
-     * Compilation phase itself. Here we compile code, using TypeScript API method.
+     * Compilation phase itself. Here we compile code,
+     *   using TypeScript API method.
      *
      */
     const compiledCode = await this.compileTSFile(filePath, codeToCompile);

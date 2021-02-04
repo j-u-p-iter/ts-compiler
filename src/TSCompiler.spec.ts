@@ -20,6 +20,8 @@ const invalidCodeSnippet = `func = param: string): string => {
   return param;
 }`;
 
+const codeSnippetThrowingError = `throw new Error('hello')`;
+
 const codeSnippetToArray = (codeSnippet) => codeSnippet.split('\n').map((lineOfCode) => lineOfCode.trim()); 
 
 /**
@@ -126,6 +128,13 @@ describe('TSCompiler', () => {
         codeSnippet
       );
 
+      /**
+       * The presence of dataURI in the sourceMappingURL tells us, 
+       *   that the content of the source maps
+       *   is inlined into the compiled file.
+       *
+       */
+
       expect(compiledResult.split('\n').pop()).toContain('//# sourceMappingURL=data:application/json;base64');
     });
 
@@ -145,6 +154,12 @@ describe('TSCompiler', () => {
         codeSnippet
       );
 
+      /**
+       * The presence of dataURI in the sourceMappingURL tells us, 
+       *   that the content of the source maps
+       *   is inlined into the compiled file.
+       *
+       */
       expect(compiledResult.split('\n').pop()).toContain('//# sourceMappingURL=data:application/json;base64');
     });
   });
@@ -246,6 +261,19 @@ describe('TSCompiler', () => {
       );
 
       await expect(compiledResult).rejects.toThrow(TSTranspileError);
+    });
+
+    it('test source maps', () => {
+      const tsCompiler = new TSCompiler({ 
+        ts, 
+        cacheFolderPath,
+        compilerOptions: {}, 
+      });
+
+      tsCompiler.compile(
+        SOURCE_CODE_FILE_NAME,
+        codeSnippetThrowingError
+      );
     });
   });
 })
