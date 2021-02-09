@@ -20,8 +20,6 @@ const invalidCodeSnippet = `func = param: string): string => {
   return param;
 }`;
 
-const codeSnippetThrowingError = `throw new Error('hello')`;
-
 const codeSnippetToArray = (codeSnippet) => codeSnippet.split('\n').map((lineOfCode) => lineOfCode.trim()); 
 
 /**
@@ -261,19 +259,6 @@ describe('TSCompiler', () => {
       );
 
       await expect(compiledResult).rejects.toThrow(TSTranspileError);
-    });
-
-    it('test source maps', () => {
-      const tsCompiler = new TSCompiler({ 
-        ts, 
-        cacheFolderPath,
-        compilerOptions: {}, 
-      });
-
-      tsCompiler.compile(
-        SOURCE_CODE_FILE_NAME,
-        codeSnippetThrowingError
-      );
     });
   });
 })

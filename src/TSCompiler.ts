@@ -197,7 +197,7 @@ export class TSCompiler {
 
       inlineSourceMap: true,
 
-      inlineSources: false,
+      inlineSources: true,
 
       /**
        * "InlineSourceMap" and "sourceMap" can not be used together. If there're both options,
@@ -246,7 +246,30 @@ export class TSCompiler {
     const { diagnostics, outputText } = this.ts.transpileModule(
       resultCodeToCompile,
       {
-        compilerOptions: this.compilerOptions,
+        /**
+         * The Error stack will contain fileName, using this path.
+         *   If not to point out this filePath, the fileName will be incorrect - "main.ts".
+         *
+         */
+        fileName: filePath,
+        compilerOptions: {
+          ...this.compilerOptions,
+
+          /**
+           * We have to add this option in the runtime,
+           *   outside of the "prepareCompilerOptions" method.
+           *
+           *   The Error stack contains the path to the source file
+           *     taking into the account "sourceRoot". "sourceRoot" by default
+           *     points out to the directory we save compiled files into.
+           *     We store compiled files into the cache directory, different
+           *     from the source files directory, that can be absolutely any.
+           *     So, we need to point out in the runtime the "sourceRoot" to have
+           *     correct path to the source file in the result generated Error stack.
+           *
+           */
+          sourceRoot: path.dirname(filePath)
+        },
         reportDiagnostics: true
       }
     );
@@ -323,16 +346,14 @@ export class TSCompiler {
     filePath: string,
     codeToCompile?: string
   ): Promise<CacheParams> {
-    const resolvedFilePath = await this.resolvePathToFile(filePath);
-
     const fileContent = codeToCompile
       ? codeToCompile
-      : await this.readFile(resolvedFilePath);
+      : await this.readFile(filePath);
 
     return {
       fileContent,
-      fileExtension: ".js",
-      filePath: resolvedFilePath
+      filePath,
+      fileExtension: ".js"
     };
   }
 
@@ -341,10 +362,12 @@ export class TSCompiler {
       environment: "node",
       handleUncaughtExceptions: false,
       retrieveFile: sourceFilePath => {
-        console.log("######");
-        console.log(sourceFilePath);
-        console.log("######");
-
+        /**
+         * By default "sourceMapRoot" reads source maps from the compiled files.
+         *   To close disk access for the "sourceMapRoot" we return the compiled result
+         *   with the source maps from the in memory cache.
+         *
+         */
         const compiledSourceCode = this.memoryStorage.read(sourceFilePath);
 
         return compiledSourceCode ? compiledSourceCode : null;
@@ -386,7 +409,12 @@ export class TSCompiler {
      */
     await this.initCache();
 
-    const cacheParams = await this.getCacheParams(filePath, codeToCompile);
+    const resolvedFilePath = await this.resolvePathToFile(filePath);
+
+    const cacheParams = await this.getCacheParams(
+      resolvedFilePath,
+      codeToCompile
+    );
 
     const compiledCodeFromCache = await this.diskCache.get(cacheParams);
 
@@ -411,7 +439,10 @@ export class TSCompiler {
      *   using TypeScript API method.
      *
      */
-    const compiledCode = await this.compileTSFile(filePath, codeToCompile);
+    const compiledCode = await this.compileTSFile(
+      resolvedFilePath,
+      codeToCompile
+    );
 
     /**
      * Store on the disk compiled code.
