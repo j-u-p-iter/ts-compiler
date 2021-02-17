@@ -1197,13 +1197,12 @@
   resolved "https://registry.yarnpkg.com/@j.u.p.iter/http-status/-/http-status-1.2.1.tgz#fde5f1ab9a37657ef4fd9837fb14c5c30c3cfc40"
   integrity sha512-iWFQDObv4fZ2LiCihdiF8SKSZR4nKsAKbBVttPIbuw6pGdWToHzWhB4MOJbv44uUv+v9/z5YLx0l7n/f6P2dzQ==
 
-"@j.u.p.iter/in-files-cache@^1.3.1":
-  version "1.3.1"
-  resolved "https://registry.yarnpkg.com/@j.u.p.iter/in-files-cache/-/in-files-cache-1.3.1.tgz#1bfa739b91da9a1cb889dbac1e043ba6ccfb2d33"
-  integrity sha512-qFDZxVWVUjNUTwdOyLFoIftBmupfMKhyoq8xxLK2X7RDagQnj8p27/lMhmN9LS6wzqQkd965tZ1petshiUPZPw==
+"@j.u.p.iter/in-files-cache@^1.3.3":
+  version "1.3.3"
+  resolved "https://registry.yarnpkg.com/@j.u.p.iter/in-files-cache/-/in-files-cache-1.3.3.tgz#03057ac38be5eab676ea0bbdae234a118c5dd6cc"
+  integrity sha512-PXh+jLNDsX7FbIo99TsIHJMjsLEQFn8FZvEBeSThHZKWExpLwtm1XUhUpWQF7zXg0peCqpgMUZKOzPR+n0+RBw==
   dependencies:
     "@j.u.p.iter/find-path-to-file" "^1.0.1"
-    "@j.u.p.iter/jupiter-scripts" "1.16.3"
     "@j.u.p.iter/system-error-code" "^1.0.0"
     fs-extra "^9.0.1"
 
